@@ -2,41 +2,45 @@
 
 ## Project Overview
 
-Web-based remote control for Claude Code. Two components:
+Web-based remote control for Claude Code. Three components:
 
 1. **Web UI** (`web/`) — Static HTML/JS page. User types text commands and sends them to the host server.
-2. **Host Server** (`host/`) — Node.js server running on the target PC. Receives commands via HTTP API and forwards them to a local Claude Code CLI process in a configured project folder.
+2. **Host Server** (`host/`) — Node.js Express server in Docker. Serves the web UI and proxies commands to the bridge.
+3. **Bridge** (`bridge/`) — Python HTTP server on the host. Forwards commands to the locally authenticated `claude` CLI.
 
 **No authentication/security** — designed for local internal WLAN only.
 
 ## Architecture
 
 ```
-[Browser: Web UI] --HTTP POST--> [Host Server on target PC] --stdin--> [Claude Code CLI]
-                  <--SSE/poll---                            <--stdout--
+[Browser :8888] --HTTP--> [Docker: Express :8888] --HTTP--> [Host: Bridge :8886] --stdin/stdout--> [claude CLI]
+                <--SSE---                         <--SSE---                       <--stream-json---
 ```
 
-- Web UI is a plain static site (HTML + vanilla JS, no framework)
-- Host Server is a Node.js Express app (ES modules)
-- Communication: REST API + Server-Sent Events (SSE) for streaming responses
-- Claude Code integration via @anthropic-ai/claude-code SDK
+**Port scheme:**
+- 8888 — Remote client UI (Express in Docker)
+- 8887 — Host admin UI (planned)
+- 8886 — Host bridge (Python, runs on host)
 
 ## Tech Stack
 
 - **Web UI**: HTML, CSS, vanilla JavaScript (no build step)
-- **Host Server**: Node.js, Express
-- **Container**: Docker (for running Node.js — never run node/npm on host directly)
+- **Host Server**: Node.js, Express (in Docker)
+- **Bridge**: Python 3 (on host, no external deps)
+- **Claude CLI**: `claude -p --output-format stream-json`
 
 ## Project Structure
 
 ```
-web/              # Static web UI
+web/              # Static web UI (served by Express)
   index.html
   style.css
   app.js
-host/             # Node.js host server
+host/             # Node.js Express server (Docker)
   package.json
   server.js
+bridge/           # Python bridge (runs on host)
+  bridge.py
 docker-compose.yml
 Dockerfile
 CLAUDE.md
@@ -44,28 +48,36 @@ CLAUDE.md
 
 ## How to Run
 
-### Development (with hot reload)
+### 1. Start the bridge (on host)
+```bash
+python3 bridge/bridge.py 8886 /path/to/work/dir
+```
+
+### 2. Start the Docker server
 ```bash
 docker compose up --build
 ```
 
-### Configuration
-Copy `.env.example` to `.env` and set:
-- `CLAUDE_WORK_DIR` — host path to mount as Claude Code's working directory
-- `ANTHROPIC_API_KEY` — Anthropic API key for Claude Code SDK
-
-### Web UI
-Served by the host server as static files, accessible at `http://<host-ip>:8888`
+### 3. Open the web UI
+`http://<host-ip>:8888`
 
 ## API Endpoints
 
-- `POST /api/command` — Send a text command `{ "command": "..." }`
-- `GET /api/stream` — SSE endpoint for streaming Claude Code output
-- `GET /api/status` — Check if Claude Code process is running
+### Express Server (:8888)
+- `POST /api/command` — Send a text command, streams SSE response
+- `GET /api/status` — Server + bridge state
+- `GET /api/history` — Conversation history array
+- `POST /api/reset` — Clear session and history
+
+### Bridge (:8886)
+- `POST /command` — Send command to claude CLI, streams SSE response
+- `GET /status` — Bridge health, session ID, work dir
+- `POST /reset` — Clear claude session
 
 ## Development Rules
 
 - Never run `node` or `npm` on local host — always use Docker
+- Exception: `bridge/bridge.py` runs on host (needs host-level claude auth)
 - No frameworks for the web UI — keep it plain HTML/JS
 - No authentication layer (local WLAN only)
 - Keep it simple — minimal dependencies

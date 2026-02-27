@@ -5,7 +5,7 @@ services:
       - "8888:8888"
     environment:
       - PORT=8888
-      - WORK_DIR=/work
+      - BRIDGE_URL=http://host.docker.internal:8886
     volumes:
       - ${CLAUDE_WORK_DIR:-.}:/work
       - ./web:/app/web

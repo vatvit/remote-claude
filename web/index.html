@@ -8,8 +8,17 @@
 </head>
 <body>
   <div id="app">
-    <h1>Remote Claude</h1>
-    <p>Web UI placeholder — see RCL-005 for full implementation.</p>
+    <header>
+      <h1>Remote Claude</h1>
+      <div id="status" class="status disconnected">disconnected</div>
+    </header>
+    <main id="chat"></main>
+    <footer>
+      <form id="form">
+        <input type="text" id="input" placeholder="Type a command..." autocomplete="off" autofocus>
+        <button type="submit" id="send">Send</button>
+      </form>
+    </footer>
   </div>
   <script src="app.js"></script>
 </body>
