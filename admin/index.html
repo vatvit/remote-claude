@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remote Claude Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Remote Claude Admin</h1>
+      <button id="refresh-btn">Refresh</button>
+    </header>
+
+    <nav id="nav">
+      <a href="#status">Status</a>
+      <a href="#session">Session</a>
+      <a href="#history">History</a>
+      <a href="#clients">Clients</a>
+      <a href="#whitelist">Whitelist</a>
+      <a href="#config">Config</a>
+    </nav>
+
+    <main>
+      <section id="status" class="panel">
+        <h2>Server Status</h2>
+        <div class="panel-body" id="status-body">Loading...</div>
+      </section>
+
+      <section id="session" class="panel">
+        <h2>Session</h2>
+        <div class="panel-body" id="session-body">Loading...</div>
+      </section>
+
+      <section id="history" class="panel">
+        <h2>Conversation History</h2>
+        <div class="panel-body" id="history-body">Loading...</div>
+      </section>
+
+      <section id="clients" class="panel">
+        <h2>Connected Clients</h2>
+        <div class="panel-body" id="clients-body">Loading...</div>
+      </section>
+
+      <section id="whitelist" class="panel">
+        <h2>IP Whitelist</h2>
+        <div class="panel-body" id="whitelist-body">Loading...</div>
+      </section>
+
+      <section id="config" class="panel">
+        <h2>Configuration</h2>
+        <div class="panel-body" id="config-body">Loading...</div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

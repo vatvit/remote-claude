@@ -2,11 +2,12 @@
 
 ## Project Overview
 
-Web-based remote control for Claude Code. Three components:
+Web-based remote control for Claude Code. Four components:
 
-1. **Web UI** (`web/`) — Static HTML/JS page. User types text commands and sends them to the host server.
-2. **Host Server** (`host/`) — Node.js Express server in Docker. Serves the web UI and proxies commands to the bridge.
-3. **Bridge** (`bridge/`) — Python HTTP server on the host. Forwards commands to the locally authenticated `claude` CLI.
+1. **Web UI** (`docs/`) — Static HTML/JS page. User types text commands and sends them to the host server. Also deployed as GitHub Pages.
+2. **Admin UI** (`admin/`) — Static HTML/JS dashboard for server management (status, clients, whitelist, config).
+3. **Host Server** (`host/`) — Node.js Express server in Docker. Serves both UIs and proxies commands to the bridge.
+4. **Bridge** (`bridge/`) — Python HTTP server on the host. Forwards commands to the locally authenticated `claude` CLI.
 
 **No authentication/security** — designed for local internal WLAN only.
 
@@ -19,7 +20,7 @@ Web-based remote control for Claude Code. Three components:
 
 **Port scheme:**
 - 8888 — Remote client UI (Express in Docker)
-- 8887 — Host admin UI (planned)
+- 8887 — Admin UI (Express in Docker, same process as client)
 - 8886 — Host bridge (Python, runs on host)
 
 ## Tech Stack
@@ -32,7 +33,11 @@ Web-based remote control for Claude Code. Three components:
 ## Project Structure
 
 ```
-web/              # Static web UI (served by Express)
+docs/             # Static web UI (served by Express + GitHub Pages)
+  index.html
+  style.css
+  app.js
+admin/            # Admin dashboard UI (served on port 8887)
   index.html
   style.css
   app.js
@@ -41,6 +46,7 @@ host/             # Node.js Express server (Docker)
   server.js
 bridge/           # Python bridge (runs on host)
   bridge.py
+config/           # Persistent admin config (whitelist, workdir)
 docker-compose.yml
 Dockerfile
 CLAUDE.md
@@ -61,6 +67,9 @@ docker compose up --build
 ### 3. Open the web UI
 `http://<host-ip>:8888`
 
+### 4. Open the admin UI
+`http://<host-ip>:8887`
+
 ## API Endpoints
 
 ### Express Server (:8888)
@@ -68,6 +77,17 @@ docker compose up --build
 - `GET /api/status` — Server + bridge state
 - `GET /api/history` — Conversation history array
 - `POST /api/reset` — Clear session and history
+
+### Admin Server (:8887)
+- `GET /admin/api/status` — Server uptime, bridge state, memory
+- `GET /admin/api/session` — Session ID, state, workdir, message count
+- `GET /admin/api/history` — Conversation history (read-only)
+- `GET /admin/api/clients` — Connected client IPs + metadata
+- `GET /admin/api/whitelist` — IP whitelist
+- `POST /admin/api/whitelist` — Add IP to whitelist
+- `DELETE /admin/api/whitelist` — Remove IP from whitelist
+- `GET /admin/api/config` — Current config
+- `POST /admin/api/config` — Save config (requires restart)
 
 ### Bridge (:8886)
 - `POST /command` — Send command to claude CLI, streams SSE response

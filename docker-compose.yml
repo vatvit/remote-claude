@@ -3,13 +3,18 @@ services:
     build: .
     ports:
       - "8888:8888"
+      - "8887:8887"
     environment:
       - PORT=8888
+      - ADMIN_PORT=8887
       - BRIDGE_URL=http://host.docker.internal:8886
+      - ALLOWED_IPS=${ALLOWED_IPS:-}
     volumes:
       - ${CLAUDE_WORK_DIR:-.}:/work
-      - ./web:/app/web
+      - ./docs:/app/docs
       - ./host:/app/host
+      - ./admin:/app/admin
+      - ./config:/app/config
       - host_node_modules:/app/host/node_modules
     command: npm run dev
 

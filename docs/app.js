@@ -1,4 +1,4 @@
-const API_BASE = window.REMOTE_CLAUDE_API || '';
+const API_BASE = new URLSearchParams(window.location.search).get('api') || window.REMOTE_CLAUDE_API || '';
 const chat = document.getElementById('chat');
 const form = document.getElementById('form');
 const input = document.getElementById('input');
