@@ -13,6 +13,9 @@ hostInput.value = API_BASE;
 hostForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const val = hostInput.value.trim().replace(/\/+$/, '');
+  API_BASE = val;
+
+  // Update URL without reload
   const params = new URLSearchParams(window.location.search);
   if (val) {
     params.set('host', val);
@@ -20,7 +23,12 @@ hostForm.addEventListener('submit', (e) => {
     params.delete('host');
   }
   const qs = params.toString();
-  window.location.search = qs ? `?${qs}` : '';
+  const newUrl = window.location.pathname + (qs ? `?${qs}` : '');
+  history.replaceState(null, '', newUrl);
+
+  // Reconnect with new host
+  connectEvents();
+  checkStatus();
 });
 
 let isProcessing = false;
