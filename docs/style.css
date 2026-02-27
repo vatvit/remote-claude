@@ -502,3 +502,11 @@ footer {
   .question-card { max-width: 95%; }
   .question-custom { flex-direction: column; }
 }
+
+.build-info {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 4px;
+  opacity: 0.5;
+}
