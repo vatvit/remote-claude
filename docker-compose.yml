@@ -1,0 +1,17 @@
+services:
+  host:
+    build: .
+    ports:
+      - "8888:8888"
+    environment:
+      - PORT=8888
+      - WORK_DIR=/work
+    volumes:
+      - ${CLAUDE_WORK_DIR:-.}:/work
+      - ./web:/app/web
+      - ./host:/app/host
+      - host_node_modules:/app/host/node_modules
+    command: npm run dev
+
+volumes:
+  host_node_modules:
