@@ -1,9 +1,27 @@
-const API_BASE = new URLSearchParams(window.location.search).get('api') || window.REMOTE_CLAUDE_API || '';
+let API_BASE = new URLSearchParams(window.location.search).get('host') || window.REMOTE_CLAUDE_API || '';
 const chat = document.getElementById('chat');
 const form = document.getElementById('form');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 const statusEl = document.getElementById('status');
+const hostInput = document.getElementById('host-input');
+const hostForm = document.getElementById('host-form');
+
+// Pre-fill host input from GET param
+hostInput.value = API_BASE;
+
+hostForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const val = hostInput.value.trim().replace(/\/+$/, '');
+  const params = new URLSearchParams(window.location.search);
+  if (val) {
+    params.set('host', val);
+  } else {
+    params.delete('host');
+  }
+  const qs = params.toString();
+  window.location.search = qs ? `?${qs}` : '';
+});
 
 let isProcessing = false;
 let eventSource = null;

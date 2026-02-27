@@ -13,6 +13,10 @@
   <div id="app">
     <header>
       <h1>Remote Claude</h1>
+      <form id="host-form" class="host-form">
+        <input type="text" id="host-input" placeholder="http://192.168.1.x:8888" autocomplete="off">
+        <button type="submit" id="host-btn">Connect</button>
+      </form>
       <div id="status" class="status disconnected">disconnected</div>
     </header>
     <main id="chat"></main>

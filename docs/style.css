@@ -64,6 +64,48 @@ header {
 header h1 {
   font-size: 18px;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+.host-form {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  max-width: 340px;
+  margin: 0 12px;
+}
+
+.host-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+
+.host-form input:focus {
+  border-color: var(--accent);
+}
+
+.host-form button {
+  padding: 4px 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.host-form button:hover {
+  background: var(--accent-hover);
 }
 
 .status {
@@ -452,7 +494,9 @@ footer {
 }
 
 @media (max-width: 600px) {
+  header { flex-wrap: wrap; gap: 6px; }
   header h1 { font-size: 16px; }
+  .host-form { max-width: none; margin: 0; order: 3; flex-basis: 100%; }
   .message { max-width: 95%; font-size: 13px; }
   #input { font-size: 16px; } /* prevent zoom on iOS */
   .question-card { max-width: 95%; }
