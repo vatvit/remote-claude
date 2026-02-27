@@ -158,12 +158,11 @@ function handleClaudeMessage(msg) {
     if (text) {
       removeTypingIndicator();
       removeWorkingIndicator();
-      if (!currentAssistantDiv) {
-        currentResultText = '';
-        currentAssistantDiv = addMessage('assistant', '');
-        currentAssistantDiv.classList.add('streaming');
-      }
-      currentResultText += text;
+      // Finalize previous bubble and start a new one
+      finishAssistantMessage();
+      currentResultText = text;
+      currentAssistantDiv = addMessage('assistant', '');
+      currentAssistantDiv.classList.add('streaming');
       currentAssistantDiv.textContent = currentResultText;
       showWorkingIndicator();
       chat.scrollTop = chat.scrollHeight;
@@ -259,6 +258,9 @@ function finishAssistantMessage() {
   removeWorkingIndicator();
   removeTypingIndicator();
   if (currentAssistantDiv) {
+    if (currentResultText) {
+      setMessageMarkdown(currentAssistantDiv, currentResultText);
+    }
     currentAssistantDiv.classList.remove('streaming');
     if (!currentAssistantDiv.textContent && !currentAssistantDiv.innerHTML.trim()) {
       currentAssistantDiv.remove();
