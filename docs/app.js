@@ -10,6 +10,7 @@ let eventSource = null;
 let currentAssistantDiv = null;
 let currentResultText = '';
 let pendingQuestions = [];
+let seenToolUseIds = new Set();
 
 // --- Markdown rendering ---
 
@@ -138,6 +139,7 @@ function connectEvents() {
     } else {
       setInputEnabled(true);
     }
+    seenToolUseIds.clear();
 
     setStatus('idle');
   });
@@ -168,11 +170,13 @@ function handleClaudeMessage(msg) {
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Check for AskUserQuestion tool_use blocks
+    // Check for AskUserQuestion tool_use blocks (deduplicate by block ID)
     const askBlocks = msg.message.content.filter(
       b => b.type === 'tool_use' && b.name === 'AskUserQuestion'
     );
     for (const block of askBlocks) {
+      if (block.id && seenToolUseIds.has(block.id)) continue;
+      if (block.id) seenToolUseIds.add(block.id);
       if (block.input?.questions) {
         pendingQuestions = pendingQuestions.concat(block.input.questions);
       }
@@ -198,8 +202,10 @@ function handleClaudeMessage(msg) {
     if (pendingQuestions.length > 0) {
       showQuestionCard(pendingQuestions);
       pendingQuestions = [];
+      seenToolUseIds.clear();
     } else {
       setInputEnabled(true);
+      seenToolUseIds.clear();
     }
 
     setStatus('idle');
