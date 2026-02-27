@@ -541,3 +541,20 @@ loadHistory();
 checkStatus();
 connectEvents();
 setInterval(checkStatus, 5000);
+
+// --- Build info ---
+(async () => {
+  const el = document.getElementById('build-info');
+  if (!el) return;
+  try {
+    const res = await fetch('https://api.github.com/repos/vatvit/remote-claude/commits/main', {
+      headers: { Accept: 'application/vnd.github.v3+json' },
+    });
+    const data = await res.json();
+    const sha = data.sha?.slice(0, 7);
+    const date = data.commit?.committer?.date?.slice(0, 10);
+    if (sha) el.textContent = `build: ${sha} | ${date}`;
+  } catch {
+    // silent
+  }
+})();
