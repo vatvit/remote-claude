@@ -125,7 +125,7 @@ header h1 {
   color: #fff;
 }
 
-.status.disconnected, .status.error {
+.status.disconnected, .status.error, .status.blocked {
   background: var(--error);
   color: #fff;
 }

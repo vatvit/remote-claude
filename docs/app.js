@@ -103,6 +103,10 @@ function addCopyButtons(el) {
 async function checkStatus() {
   try {
     const res = await fetch(`${API_BASE}/api/status`);
+    if (res.status === 403) {
+      setStatus('blocked');
+      return;
+    }
     const data = await res.json();
     const bridgeState = data.bridge?.state || data.bridge?.status || 'unknown';
     if (data.bridge?.status === 'unreachable') {
