@@ -118,12 +118,44 @@ app.get('/api/events', (req, res) => {
   const url = new URL('/events', BRIDGE_URL);
 
   const bridgeReq = http.request(url, { method: 'GET' }, (bridgeRes) => {
-    // Pipe bridge SSE directly to browser
+    // Buffer for parsing SSE events on the side
+    let sseBuf = '';
+
     bridgeRes.on('data', (chunk) => {
+      // Always pipe raw bytes to the browser first
       try {
         res.write(chunk);
       } catch {
         // Client disconnected
+      }
+
+      // Parse SSE events on the side to capture results for history
+      sseBuf += chunk.toString();
+      let boundary;
+      while ((boundary = sseBuf.indexOf('\n\n')) !== -1) {
+        const rawEvent = sseBuf.slice(0, boundary);
+        sseBuf = sseBuf.slice(boundary + 2);
+
+        // Extract "data:" line(s) from the SSE event
+        const dataLines = rawEvent
+          .split('\n')
+          .filter(line => line.startsWith('data:'))
+          .map(line => line.slice(5).trim());
+
+        if (dataLines.length === 0) continue;
+
+        try {
+          const parsed = JSON.parse(dataLines.join(''));
+          if (parsed.type === 'result' && parsed.result) {
+            conversationHistory.push({
+              role: 'assistant',
+              content: parsed.result,
+              timestamp: Date.now(),
+            });
+          }
+        } catch {
+          // Not valid JSON — ignore
+        }
       }
     });
 

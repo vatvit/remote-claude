@@ -9,6 +9,7 @@ let isProcessing = false;
 let eventSource = null;
 let currentAssistantDiv = null;
 let currentResultText = '';
+let pendingQuestions = [];
 
 // --- Status polling ---
 
@@ -65,7 +66,14 @@ function connectEvents() {
   eventSource.addEventListener('process_ended', () => {
     removeTypingIndicator();
     finishAssistantMessage();
-    setInputEnabled(true);
+
+    if (pendingQuestions.length > 0) {
+      showQuestionCard(pendingQuestions);
+      pendingQuestions = [];
+    } else {
+      setInputEnabled(true);
+    }
+
     setStatus('idle');
   });
 
@@ -96,6 +104,16 @@ function handleClaudeMessage(msg) {
       showWorkingIndicator();
       chat.scrollTop = chat.scrollHeight;
     }
+
+    // Check for AskUserQuestion tool_use blocks
+    const askBlocks = msg.message.content.filter(
+      b => b.type === 'tool_use' && b.name === 'AskUserQuestion'
+    );
+    for (const block of askBlocks) {
+      if (block.input?.questions) {
+        pendingQuestions = pendingQuestions.concat(block.input.questions);
+      }
+    }
   }
 
   // Final result
@@ -113,7 +131,14 @@ function handleClaudeMessage(msg) {
 
     currentAssistantDiv = null;
     currentResultText = '';
-    setInputEnabled(true);
+
+    if (pendingQuestions.length > 0) {
+      showQuestionCard(pendingQuestions);
+      pendingQuestions = [];
+    } else {
+      setInputEnabled(true);
+    }
+
     setStatus('idle');
     chat.scrollTop = chat.scrollHeight;
   }
@@ -212,32 +237,182 @@ async function sendCommand(command) {
   }
 }
 
-// --- Send response (to Claude's question) ---
+// --- Question card UI ---
 
-async function sendResponse(response) {
-  addMessage('user', response);
-  setInputEnabled(false);
-  setStatus('processing');
-  addTypingIndicator();
+function removeQuestionCard() {
+  const existing = document.getElementById('question-card');
+  if (existing) existing.remove();
+}
 
-  try {
-    const res = await fetch(`${API_BASE}/api/respond`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ response }),
+function showQuestionCard(questions) {
+  removeQuestionCard();
+
+  const answers = new Array(questions.length).fill(null);
+  let currentIndex = 0;
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+  card.id = 'question-card';
+
+  function render() {
+    const q = questions[currentIndex];
+    card.innerHTML = '';
+
+    // Header with counter
+    if (questions.length > 1) {
+      const header = document.createElement('div');
+      header.className = 'question-header';
+      header.textContent = `Question ${currentIndex + 1} of ${questions.length}`;
+      card.appendChild(header);
+    }
+
+    // Question text
+    const questionText = document.createElement('div');
+    questionText.className = 'question-text';
+    questionText.textContent = q.header || q.question;
+    card.appendChild(questionText);
+
+    if (q.header && q.question && q.header !== q.question) {
+      const subText = document.createElement('div');
+      subText.className = 'question-subtext';
+      subText.textContent = q.question;
+      card.appendChild(subText);
+    }
+
+    // Option buttons
+    if (q.options && q.options.length > 0) {
+      const optionsContainer = document.createElement('div');
+      optionsContainer.className = 'question-options';
+
+      for (const opt of q.options) {
+        const btn = document.createElement('button');
+        btn.className = 'question-option';
+        if (answers[currentIndex] === opt.label) {
+          btn.classList.add('selected');
+        }
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'question-option-label';
+        labelSpan.textContent = opt.label;
+        btn.appendChild(labelSpan);
+
+        if (opt.description) {
+          const descSpan = document.createElement('span');
+          descSpan.className = 'question-option-desc';
+          descSpan.textContent = opt.description;
+          btn.appendChild(descSpan);
+        }
+
+        btn.addEventListener('click', () => {
+          answers[currentIndex] = opt.label;
+          advanceOrSubmit();
+        });
+
+        optionsContainer.appendChild(btn);
+      }
+
+      card.appendChild(optionsContainer);
+    }
+
+    // Custom answer input
+    const customArea = document.createElement('div');
+    customArea.className = 'question-custom';
+
+    const customInput = document.createElement('input');
+    customInput.type = 'text';
+    customInput.placeholder = 'Custom answer...';
+    customInput.className = 'question-custom-input';
+    if (answers[currentIndex] && !isOptionLabel(q, answers[currentIndex])) {
+      customInput.value = answers[currentIndex];
+    }
+
+    const customBtn = document.createElement('button');
+    customBtn.className = 'question-custom-btn';
+    customBtn.textContent = 'Submit';
+    customBtn.addEventListener('click', () => {
+      const val = customInput.value.trim();
+      if (!val) return;
+      answers[currentIndex] = val;
+      advanceOrSubmit();
     });
 
-    const data = await res.json();
+    customInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        customBtn.click();
+      }
+    });
 
-    if (!res.ok) {
-      throw new Error(data.error || `HTTP ${res.status}`);
+    customArea.appendChild(customInput);
+    customArea.appendChild(customBtn);
+    card.appendChild(customArea);
+
+    // Navigation buttons
+    if (questions.length > 1) {
+      const nav = document.createElement('div');
+      nav.className = 'question-nav';
+
+      const backBtn = document.createElement('button');
+      backBtn.textContent = 'Back';
+      backBtn.disabled = currentIndex === 0;
+      backBtn.addEventListener('click', () => {
+        if (currentIndex > 0) {
+          currentIndex--;
+          render();
+        }
+      });
+
+      const fwdBtn = document.createElement('button');
+      fwdBtn.textContent = 'Forward';
+      fwdBtn.disabled = currentIndex === questions.length - 1 || answers[currentIndex] === null;
+      fwdBtn.addEventListener('click', () => {
+        if (currentIndex < questions.length - 1 && answers[currentIndex] !== null) {
+          currentIndex++;
+          render();
+        }
+      });
+
+      nav.appendChild(backBtn);
+      nav.appendChild(fwdBtn);
+      card.appendChild(nav);
     }
-  } catch (err) {
-    removeTypingIndicator();
-    addMessage('error', err.message);
-    setInputEnabled(true);
-    setStatus('idle');
+
+    chat.scrollTop = chat.scrollHeight;
   }
+
+  function isOptionLabel(q, value) {
+    if (!q.options) return false;
+    return q.options.some(opt => opt.label === value);
+  }
+
+  function advanceOrSubmit() {
+    if (currentIndex < questions.length - 1) {
+      currentIndex++;
+      render();
+    } else {
+      submitAllAnswers();
+    }
+  }
+
+  function submitAllAnswers() {
+    removeQuestionCard();
+    let responseText;
+    if (questions.length === 1) {
+      responseText = answers[0] || '';
+    } else {
+      responseText = answers
+        .map((a, i) => `${i + 1}. ${a || ''}`)
+        .join('\n');
+    }
+    if (responseText) {
+      sendCommand(responseText);
+    } else {
+      setInputEnabled(true);
+    }
+  }
+
+  chat.appendChild(card);
+  render();
 }
 
 // --- Form handler ---
@@ -248,7 +423,6 @@ form.addEventListener('submit', (e) => {
   if (!text || isProcessing) return;
   input.value = '';
 
-  // If Claude is waiting for input, use /respond; otherwise /command
   sendCommand(text);
 });
 
