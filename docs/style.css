@@ -503,6 +503,24 @@ footer {
   .question-custom { flex-direction: column; }
 }
 
+.debug-panel {
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #aaa;
+  background: #1a1a2e;
+  padding: 8px 12px;
+  border-top: 1px solid #333;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.debug-panel:empty {
+  display: none;
+}
+
 .build-info {
   text-align: center;
   font-size: 10px;

@@ -27,9 +27,24 @@ hostForm.addEventListener('submit', (e) => {
   history.replaceState(null, '', newUrl);
 
   // Reconnect with new host
+  dbg(`Connecting to: "${API_BASE}"`);
   connectEvents();
   checkStatus();
 });
+
+// --- Debug log ---
+const debugPanel = document.getElementById('debug-panel');
+function dbg(msg) {
+  const ts = new Date().toLocaleTimeString();
+  const line = `[${ts}] ${msg}`;
+  if (debugPanel) {
+    debugPanel.textContent += line + '\n';
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+  }
+  console.log(line);
+}
+dbg(`API_BASE = "${API_BASE}"`);
+dbg(`URL = ${window.location.href}`);
 
 let isProcessing = false;
 let eventSource = null;
@@ -101,13 +116,17 @@ function addCopyButtons(el) {
 // --- Status polling ---
 
 async function checkStatus() {
+  const url = `${API_BASE}/api/status`;
   try {
-    const res = await fetch(`${API_BASE}/api/status`);
+    dbg(`GET ${url}`);
+    const res = await fetch(url);
+    dbg(`GET ${url} → ${res.status}`);
     if (res.status === 403) {
       setStatus('blocked');
       return;
     }
     const data = await res.json();
+    dbg(`status: ${JSON.stringify(data.bridge || {})}`);
     const bridgeState = data.bridge?.state || data.bridge?.status || 'unknown';
     if (data.bridge?.status === 'unreachable') {
       setStatus('disconnected');
@@ -116,7 +135,8 @@ async function checkStatus() {
     } else {
       setStatus('idle');
     }
-  } catch {
+  } catch (err) {
+    dbg(`GET ${url} → ERROR: ${err.message}`);
     setStatus('disconnected');
   }
 }
@@ -133,7 +153,13 @@ function connectEvents() {
     eventSource.close();
   }
 
-  eventSource = new EventSource(`${API_BASE}/api/events`);
+  const evtUrl = `${API_BASE}/api/events`;
+  dbg(`SSE connecting: ${evtUrl}`);
+  eventSource = new EventSource(evtUrl);
+
+  eventSource.addEventListener('open', () => {
+    dbg('SSE connected');
+  });
 
   eventSource.addEventListener('message', (e) => {
     try {
@@ -169,7 +195,7 @@ function connectEvents() {
   });
 
   eventSource.onerror = () => {
-    // EventSource auto-reconnects
+    dbg(`SSE error (readyState=${eventSource.readyState})`);
   };
 }
 
