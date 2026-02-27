@@ -11,6 +11,67 @@ let currentAssistantDiv = null;
 let currentResultText = '';
 let pendingQuestions = [];
 
+// --- Markdown rendering ---
+
+function configureMarked() {
+  if (typeof marked === 'undefined') return;
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+    highlight: function(code, lang) {
+      if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
+        return hljs.highlight(code, { language: lang }).value;
+      }
+      if (typeof hljs !== 'undefined') {
+        return hljs.highlightAuto(code).value;
+      }
+      return code;
+    },
+  });
+}
+
+function renderMarkdown(text) {
+  if (typeof marked === 'undefined') return escapeHtml(text);
+  try {
+    return marked.parse(text);
+  } catch {
+    return escapeHtml(text);
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function setMessageMarkdown(el, text) {
+  el.innerHTML = renderMarkdown(text);
+  el.querySelectorAll('a').forEach(a => {
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+  });
+  addCopyButtons(el);
+}
+
+function addCopyButtons(el) {
+  el.querySelectorAll('pre').forEach(pre => {
+    if (pre.querySelector('.copy-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', () => {
+      const code = pre.querySelector('code');
+      navigator.clipboard.writeText(code ? code.textContent : pre.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    });
+    pre.style.position = 'relative';
+    pre.appendChild(btn);
+  });
+}
+
 // --- Status polling ---
 
 async function checkStatus() {
@@ -84,7 +145,6 @@ function connectEvents() {
 
 function handleClaudeMessage(msg) {
   const msgType = msg.type || '';
-  const msgSubtype = msg.subtype || '';
 
   // Assistant text content
   if (msgType === 'assistant' && msg.message?.content) {
@@ -123,7 +183,7 @@ function handleClaudeMessage(msg) {
     const resultText = msg.result || currentResultText || '(no response)';
 
     if (currentAssistantDiv) {
-      currentAssistantDiv.textContent = resultText;
+      setMessageMarkdown(currentAssistantDiv, resultText);
       currentAssistantDiv.classList.remove('streaming');
     } else {
       addMessage('assistant', resultText);
@@ -149,7 +209,11 @@ function handleClaudeMessage(msg) {
 function addMessage(role, content) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
-  div.textContent = content;
+  if (role === 'assistant') {
+    setMessageMarkdown(div, content);
+  } else {
+    div.textContent = content;
+  }
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
   return div;
@@ -192,7 +256,7 @@ function finishAssistantMessage() {
   removeTypingIndicator();
   if (currentAssistantDiv) {
     currentAssistantDiv.classList.remove('streaming');
-    if (!currentAssistantDiv.textContent) {
+    if (!currentAssistantDiv.textContent && !currentAssistantDiv.innerHTML.trim()) {
       currentAssistantDiv.remove();
     }
     currentAssistantDiv = null;
@@ -442,6 +506,7 @@ async function loadHistory() {
 
 // --- Init ---
 
+configureMarked();
 loadHistory();
 checkStatus();
 connectEvents();
