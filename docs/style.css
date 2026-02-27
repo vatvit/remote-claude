@@ -503,16 +503,6 @@ footer {
   .question-custom { flex-direction: column; }
 }
 
-.message.debug {
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: none;
-  padding: 2px 14px;
-  align-self: stretch;
-  opacity: 0.6;
-}
-
 .build-info {
   text-align: center;
   font-size: 10px;

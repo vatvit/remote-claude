@@ -27,28 +27,9 @@ hostForm.addEventListener('submit', (e) => {
   history.replaceState(null, '', newUrl);
 
   // Reconnect with new host
-  dbg(`Connecting to: "${API_BASE}"`);
   connectEvents();
   checkStatus();
 });
-
-// --- Debug log (outputs to chat) ---
-const BUILD_TS = '2026-02-27T21:30';
-const _dbgQueue = [];
-function dbg(msg) {
-  const ts = new Date().toLocaleTimeString();
-  const line = `[${ts}] ${msg}`;
-  console.log(line);
-  if (chat) {
-    const div = document.createElement('div');
-    div.className = 'message debug';
-    div.textContent = line;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-  }
-}
-dbg(`loaded build: ${BUILD_TS}`);
-dbg(`API_BASE = "${API_BASE}"`);
 
 let isProcessing = false;
 let eventSource = null;
@@ -120,17 +101,13 @@ function addCopyButtons(el) {
 // --- Status polling ---
 
 async function checkStatus() {
-  const url = `${API_BASE}/api/status`;
   try {
-    dbg(`GET ${url}`);
-    const res = await fetch(url);
-    dbg(`GET ${url} → ${res.status}`);
+    const res = await fetch(`${API_BASE}/api/status`);
     if (res.status === 403) {
       setStatus('blocked');
       return;
     }
     const data = await res.json();
-    dbg(`status: ${JSON.stringify(data.bridge || {})}`);
     const bridgeState = data.bridge?.state || data.bridge?.status || 'unknown';
     if (data.bridge?.status === 'unreachable') {
       setStatus('disconnected');
@@ -139,8 +116,7 @@ async function checkStatus() {
     } else {
       setStatus('idle');
     }
-  } catch (err) {
-    dbg(`GET ${url} → ERROR: ${err.message}`);
+  } catch {
     setStatus('disconnected');
   }
 }
@@ -157,13 +133,7 @@ function connectEvents() {
     eventSource.close();
   }
 
-  const evtUrl = `${API_BASE}/api/events`;
-  dbg(`SSE connecting: ${evtUrl}`);
-  eventSource = new EventSource(evtUrl);
-
-  eventSource.addEventListener('open', () => {
-    dbg('SSE connected');
-  });
+  eventSource = new EventSource(`${API_BASE}/api/events`);
 
   eventSource.addEventListener('message', (e) => {
     try {
@@ -199,7 +169,7 @@ function connectEvents() {
   });
 
   eventSource.onerror = () => {
-    dbg(`SSE error (readyState=${eventSource.readyState})`);
+    // EventSource auto-reconnects
   };
 }
 
@@ -576,7 +546,6 @@ setInterval(checkStatus, 5000);
 (async () => {
   const el = document.getElementById('build-info');
   if (!el) return;
-  el.textContent = `loaded: ${BUILD_TS}`;
   try {
     const res = await fetch('https://api.github.com/repos/vatvit/remote-claude/commits/main', {
       headers: { Accept: 'application/vnd.github.v3+json' },
@@ -584,7 +553,7 @@ setInterval(checkStatus, 5000);
     const data = await res.json();
     const sha = data.sha?.slice(0, 7);
     const date = data.commit?.committer?.date?.slice(0, 10);
-    if (sha) el.textContent = `loaded: ${BUILD_TS} | latest: ${sha} (${date})`;
+    if (sha) el.textContent = `build: ${sha} | ${date}`;
   } catch {
     // silent
   }
