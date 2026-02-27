@@ -32,19 +32,23 @@ hostForm.addEventListener('submit', (e) => {
   checkStatus();
 });
 
-// --- Debug log ---
-const debugPanel = document.getElementById('debug-panel');
+// --- Debug log (outputs to chat) ---
+const BUILD_TS = '2026-02-27T21:30';
+const _dbgQueue = [];
 function dbg(msg) {
   const ts = new Date().toLocaleTimeString();
   const line = `[${ts}] ${msg}`;
-  if (debugPanel) {
-    debugPanel.textContent += line + '\n';
-    debugPanel.scrollTop = debugPanel.scrollHeight;
-  }
   console.log(line);
+  if (chat) {
+    const div = document.createElement('div');
+    div.className = 'message debug';
+    div.textContent = line;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
 }
+dbg(`loaded build: ${BUILD_TS}`);
 dbg(`API_BASE = "${API_BASE}"`);
-dbg(`URL = ${window.location.href}`);
 
 let isProcessing = false;
 let eventSource = null;
@@ -572,6 +576,7 @@ setInterval(checkStatus, 5000);
 (async () => {
   const el = document.getElementById('build-info');
   if (!el) return;
+  el.textContent = `loaded: ${BUILD_TS}`;
   try {
     const res = await fetch('https://api.github.com/repos/vatvit/remote-claude/commits/main', {
       headers: { Accept: 'application/vnd.github.v3+json' },
@@ -579,7 +584,7 @@ setInterval(checkStatus, 5000);
     const data = await res.json();
     const sha = data.sha?.slice(0, 7);
     const date = data.commit?.committer?.date?.slice(0, 10);
-    if (sha) el.textContent = `build: ${sha} | ${date}`;
+    if (sha) el.textContent = `loaded: ${BUILD_TS} | latest: ${sha} (${date})`;
   } catch {
     // silent
   }
